@@ -77,6 +77,11 @@ bool loadStats(const std::string& path, Stats& s, std::string& err);
 constexpr double kAutoMinScore = 0.5;
 constexpr double kAutoMinLead = 2.0;
 
+// Re-phase: a hinted frame pair whose frame difference is at least kRephaseMinFD and kRephaseRatio times its merge
+// delta is taken as the real blend pair and replaces the earlier pair (not with compat).
+constexpr double kRephaseMinFD = 1.0;
+constexpr double kRephaseRatio = 20.0;
+
 struct Options {
   int pal = 0;              // 0 film (cycle 5), 1 PAL (cycle 6), -1 automatic
   double lockthresh = 1.0;  // 0 switches locking off

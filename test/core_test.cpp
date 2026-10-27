@@ -3,7 +3,9 @@
 #include <cmath>
 #include <cstdio>
 #include <cstdlib>
+#include <initializer_list>
 #include <random>
+#include <string>
 #include <vector>
 
 #include "core/exblend.hpp"
@@ -64,9 +66,53 @@ void expect(bool ok, const char* what, int round) {
   }
 }
 
+bool isDropAt(const Sequence& s, int k) { return (s.fdat[static_cast<size_t>(k)] & DROP_MASK) != 0; }
+
+// Pair records with blend pairs at `pairs` and a strong pair at `strong` inside the hints of the last earlier pair.
+Stats rephaseStats(std::initializer_list<int> pairs, int strong) {
+  const double unit = 100.0 * 50 * 235 / 50.0;  // sum per metric unit
+  Stats st;
+  st.geom = {100, 100, 8};
+  st.frames = 60;
+  st.pairs.resize(static_cast<size_t>(st.frames) + 3);
+  auto set = [&](int p, double md, double fd) {
+    PairRecord& r = st.pairs[static_cast<size_t>(p + 2)];
+    r = {static_cast<uint64_t>(md * unit), static_cast<uint64_t>(fd * unit), static_cast<uint64_t>(40 * unit),
+         static_cast<float>(md), static_cast<float>(fd), 40.0f};
+  };
+  for (int p = -2; p <= st.frames; ++p) set(p, 5, 5);
+  for (int p : pairs) set(p, 0.05, 5);
+  set(strong, 0.05, 9);
+  return st;
+}
+
+int indexAt(const Stats& st, bool compat, int k, Sequence* out = nullptr) {
+  Options o;
+  o.compat = compat;
+  Sequence s;
+  std::string err;
+  expect(buildSequence(st, o, s, err), "rephase case builds", compat);
+  if (out) *out = s;
+  return s.fdat[static_cast<size_t>(k)] & IX_MASK;
+}
+
+void rephaseCases() {
+  // Wrong phase: 23 is no cycle after 15, the strong pair at 26 takes over (not with compat).
+  const Stats off = rephaseStats({10, 15, 23, 31, 36, 41, 46}, 26);
+  Sequence s;
+  expect(indexAt(off, false, 26, &s) == IX1 && (s.fdat[27] & IX_MASK) == IX2 && (s.fdat[23] & IX_MASK) == IXH,
+         "strong hinted pair re-phases an off-rhythm pair", 0);
+  expect(isDropAt(s, 27) && !isDropAt(s, 25), "decimation follows the new phase", 0);
+  expect(indexAt(off, true, 23) == IX1 && indexAt(off, true, 26) == IXH, "compat keeps the first phase", 1);
+  // 25 follows 20 by one cycle: the pattern confirms it, no re-phase at 27.
+  const Stats on = rephaseStats({10, 15, 20, 25, 32, 37, 42, 47}, 27);
+  expect(indexAt(on, false, 25) == IX1 && indexAt(on, false, 27) == IXH, "pair on the cycle rhythm stays", 0);
+}
+
 }  // namespace
 
 int main() {
+  rephaseCases();
   std::mt19937 rng(12345);
   for (int round = 0; round < 40; ++round) {
     // Large frames push the float sums past 2^24 so rounding of the v1.04 accumulation is exercised.

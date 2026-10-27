@@ -129,7 +129,11 @@ One command per line, in ascending frame order; `#` starts a comment line.
   - Decisions depended on `show` (with `show` ≤ 1 some frames skipped the detector). They do not depend on display
     settings now; `fullscan=0` keeps the old variant.
   - Invalid combinations (`disp=2` with decimation, `disp=4` without) are errors instead of silently using `disp=1`.
-- `compat=1` brings back the first two behaviours for 8-bit comparisons with the original.
+  - In a static stretch the sequence can lock onto the wrong phase (both phases look alike); a blend pair at the next
+    scene cut then lies inside the hints and stays blended (a ghost of the next scene). A hinted pair with a clear blend
+    signature (frame difference at least 1.0 and 20 times the merge delta) now takes over, unless the pair it replaces
+    is exactly one cycle after the pair before it. Logged as `RE-PHASED`.
+- `compat=1` brings back the first two behaviours and the phase lock for 8-bit comparisons with the original.
 - Changed: `pal=-1` decides once for the whole clip after the scan instead of switching while frames are delivered
   (v1.04 mode 0 only); it works with decimation and does not depend on the frame order.
 - Removed: mode 0 (free running), the text overlay (`show` 2–5; use the frame properties, e.g.

@@ -22,7 +22,8 @@ VapourSynth API 4 (`exblend.ExBlend`, `exblend.Scan`). 8..16 bit integer planar 
   (frame 0 also -2, -1; the last frame also N); the stats file is written by the call that completes the clip.
 - `src/vs_plugin.cpp`: `ExBlend` scans in the constructor through an internal `Scan` node with `getFrameAsync`
   (several frames in flight), `src/avs_plugin.cpp` scans sequentially. Both `fmParallel`/`MT_NICE_FILTER` afterwards.
-- Defects of v1.04 fixed by default and restored by `compat=1`: float sums, frame 0 weight 0 in decimation.
+- Defects of v1.04 fixed by default and restored by `compat=1`: float sums, frame 0 weight 0 in decimation, phase
+  lock after a static stretch (`canRephase()`/`rephase()`, thresholds `kRephaseMinFD`, `kRephaseRatio`, rhythm rule).
   `fullscan=0` restores the decisions of v1.04 with `show` <= 1. Keep every other behaviour identical to v1.04.
 
 ## Tests

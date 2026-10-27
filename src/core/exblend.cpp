@@ -128,6 +128,46 @@ class Decider {
 
   void info(const std::string& s) { seq_.log.push_back(s); }
 
+  // Adds (+1) or removes (-1) frame k from the straight/blend pair counters.
+  void count(int k, int sign) {
+    const int ix = fdat()[k] & IX_MASK;
+    if (ix == IX0 || ix == IXH) seq_.straight += sign;
+    if (ix == IX1) seq_.blendPairs += sign;
+  }
+
+  // Strong blend pair at p inside hints of an earlier pair: the earlier pair was the wrong phase (static stretch).
+  template <typename T>
+  bool canRephase(int p, T md, T fd) const {
+    if (opt_.compat || p < 2 || p + 1 >= n_ || md > static_cast<T>(opt_.ithresh)) return false;
+    if (fd < static_cast<T>(kRephaseMinFD) || md * static_cast<T>(kRephaseRatio) > fd) return false;
+    const uint8_t a = seq_.fdat[static_cast<size_t>(p)], b = seq_.fdat[static_cast<size_t>(p + 1)];
+    if (!isIXH(a) || isMan(a) || !(isIXH(b) || b == FDAT_INIT) || isMan(b)) return false;
+    // An earlier pair one cycle after its predecessor follows the pattern and stays.
+    for (int k = std::max(p - seq_.hints - 1, 0); k < p; ++k)
+      if (isIX1(seq_.fdat[static_cast<size_t>(k)]) && k >= seq_.cycle && isIX1(seq_.fdat[static_cast<size_t>(k - seq_.cycle)]))
+        return false;
+    return true;
+  }
+
+  // Moves the sequence to the blend pair p, p+1; n is the frame being decided (frames before it are counted).
+  void rephase(int p, int n, int hints) {
+    int lo = std::max(p - hints - 1, 0);
+    if (lo > 0 && isIX2(fdat()[lo])) --lo;
+    auto put = [&](int k, uint8_t v) {
+      if (k < n) count(k, -1);
+      fdat()[k] = v;
+      if (k < n) count(k, +1);
+    };
+    for (int k = lo; k < p; ++k)
+      if ((isIX1(fdat()[k]) || isIX2(fdat()[k])) && !isMan(fdat()[k])) put(k, IXH);
+    put(p, IX1);
+    put(p + 1, IX2);
+    for (int i = 0; i < hints; ++i) {
+      setFdat(p + kBlendCount + i, IXH);
+      setFdat(p - hints + i, IXH);
+    }
+  }
+
   // Manual override command file, syntax and checks of v1.04 ('#' starts a comment line).
   bool parseOverride(std::string& err) {
     FILE* fp = std::fopen(opt_.overrideFile.c_str(), "rt");
@@ -321,7 +361,10 @@ class Decider {
               setFdat(n, IX0);
               setFdat(n + 1, IX0);
             } else if (!isIX1(curr)) {
-              if (md32 <= ithresh && curr == FDAT_INIT && next == FDAT_INIT) {
+              if (canRephase(n, md32, fd34)) {
+                rephase(n, n, hints);
+                info(format("[%d] RE-PHASED: MD=%6.4f FD=%6.4f", n, static_cast<double>(md32), static_cast<double>(fd34)));
+              } else if (md32 <= ithresh && curr == FDAT_INIT && next == FDAT_INIT) {
                 setFdat(n, IX1);
                 setFdat(n + 1, IX2);
                 for (int i = 0; i < hints; ++i) {
@@ -342,7 +385,11 @@ class Decider {
               setFdat(n - 1, IX0);
               setFdat(n, IX0);
             } else if (!isIX2(curr)) {
-              if (md21 <= ithresh && curr == FDAT_INIT && prev == FDAT_INIT) {
+              if (canRephase(n - 1, md21, fd23)) {
+                rephase(n - 1, n, hints);
+                info(format("[%d] RE-PHASED: MD=%6.4f FD=%6.4f", n - 1, static_cast<double>(md21),
+                            static_cast<double>(fd23)));
+              } else if (md21 <= ithresh && curr == FDAT_INIT && prev == FDAT_INIT) {
                 setFdat(n - 1, IX1);
                 setFdat(n, IX2);
                 for (int i = 0; i < hints; ++i) {
