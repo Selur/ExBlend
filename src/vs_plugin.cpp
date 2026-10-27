@@ -155,6 +155,7 @@ const VSFrame* VS_CC exblendGetFrame(int n, int reason, void* instance, void**, 
   vsapi->mapSetInt(props, "ExBlendIndex", flags & IX_MASK, maReplace);
   vsapi->mapSetInt(props, "ExBlendFlags", flags, maReplace);
   vsapi->mapSetInt(props, "ExBlendSource", s, maReplace);
+  vsapi->mapSetInt(props, "ExBlendPal", d->seq.pal, maReplace);
   const PairRecord& r = d->stats.pair(s);
   vsapi->mapSetFloat(props, "ExBlendMD", d->compat ? r.cmd : scaleSum(r.md, d->stats.geom), maReplace);
   vsapi->mapSetFloat(props, "ExBlendFD", d->compat ? r.cfd : scaleSum(r.fd, d->stats.geom), maReplace);
@@ -349,7 +350,7 @@ void VS_CC exblendCreate(const VSMap* in, VSMap* out, void*, VSCore* core, const
   d->compat = opt.compat;
   const int decclpix = static_cast<int>(mapIntOr(in, "decclpix", 1, vsapi));
 
-  if (opt.pal != 0 && opt.pal != 1) return fail("pal must be 0 (film) or 1 (PAL)");
+  if (opt.pal < -1 || opt.pal > 1) return fail("pal must be -1 (auto), 0 (film) or 1 (PAL)");
   if (opt.lockthresh < 0 || opt.lockthresh > 100) return fail("lockthresh must be 0.0 .. 100.0");
   if (opt.ithresh < 0 || opt.ithresh > 100) return fail("ithresh must be 0.0 .. 100.0");
   if (d->op.disp < DISP_BLENDED || d->op.disp > DISP_ADJACENT) return fail("disp must be 0 .. 4");
@@ -387,8 +388,9 @@ void VS_CC exblendCreate(const VSMap* in, VSMap* out, void*, VSCore* core, const
   }
 
   if (!buildSequence(d->stats, opt, d->seq, msg)) return fail(msg);
+  if (opt.pal == -1) vsapi->logMessage(mtInformation, ("ExBlend: " + d->seq.log.front()).c_str(), core);
   const std::string decfile = mapString(in, "decfile", vsapi);
-  if (!decfile.empty() && !writeDecimatedFile(decfile, d->seq, opt.pal, decclpix, msg)) return fail(msg);
+  if (!decfile.empty() && !writeDecimatedFile(decfile, d->seq, decclpix, msg)) return fail(msg);
   const std::string logfile = mapString(in, "logfile", vsapi);
   if (!logfile.empty() && !writeLogFile(logfile, d->seq, d->stats, opt, msg)) return fail(msg);
 

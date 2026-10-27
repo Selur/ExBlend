@@ -166,6 +166,20 @@ def main():
     p = psnr(pout, src[:pout.num_frames], range(8, pout.num_frames - 8))
     check(p > 45, "PAL decimated output matches the film (%.1f dB)" % p)
 
+    # Automatic film/PAL choice: same decisions as the matching fixed variant; no blend pattern stays film.
+    for c, want, fixed in ((clip, 0, dec), (pal, 1, pout)):
+        a = core.exblend.ExBlend(c, pal=-1)
+        check(a.num_frames == fixed.num_frames and a.get_frame(10).props["ExBlendPal"] == want,
+              "pal=-1 picks %s" % ("PAL" if want else "film"))
+        check(props(a, "ExBlendFlags", range(0, a.num_frames, 7)) == props(fixed, "ExBlendFlags",
+                                                                           range(0, a.num_frames, 7)),
+              "pal=-1 decisions equal pal=%d" % want)
+    autolog = os.path.join(tmp, "auto.log")
+    a = core.exblend.ExBlend(src, pal=-1, logfile=autolog)
+    with open(autolog) as f:
+        text = f.read()
+    check(a.get_frame(10).props["ExBlendPal"] == 0 and "undecided" in text, "pal=-1 without blends stays film")
+
     # High bit depth: same decisions for the same picture content; output close to the film.
     base_flags = props(out, "ExBlendFlags", range(clip.num_frames))
     for fmt in (vs.YUV420P10, vs.YUV420P16, vs.GRAY8, vs.YUV444P8):

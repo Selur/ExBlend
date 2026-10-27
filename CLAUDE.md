@@ -15,7 +15,8 @@ VapourSynth API 4 (`exblend.ExBlend`, `exblend.Scan`). 8..16 bit integer planar 
     `-ffp-contract=off`).
   - `buildSequence()`: override parser, the decision pass of v1.04 `GetFrame()` mode 1 run forward over all frames
     (`Decider::decide<T>`, `float` for compat, `double` otherwise), decimation choice of the v1.04 destructor.
-    `fdat` bytes have the XBD layout.
+    `fdat` bytes have the XBD layout. `pal=-1` runs the pass for both variants and keeps the one with clearly more
+    continued cycles (`kAutoMinScore`, `kAutoMinLead`, measured on `G:\clips\blends`), film when undecided.
   - `planFrame()`/`renderPlane()`: which input frames make an output frame (v1.04 mode 2 branches) and the pixel ops.
 - `src/core/scan.hpp`: `ScanState` collects pair records from any thread in any order; each frame n owns pair n
   (frame 0 also -2, -1; the last frame also N); the stats file is written by the call that completes the clip.

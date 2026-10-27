@@ -140,6 +140,7 @@ class ExBlendFilter : public GenericVideoFilter {
     env->propSetInt(props, "ExBlendIndex", flags & IX_MASK, PROPAPPENDMODE_REPLACE);
     env->propSetInt(props, "ExBlendFlags", flags, PROPAPPENDMODE_REPLACE);
     env->propSetInt(props, "ExBlendSource", s, PROPAPPENDMODE_REPLACE);
+    env->propSetInt(props, "ExBlendPal", seq_.pal, PROPAPPENDMODE_REPLACE);
     const PairRecord& r = stats_.pair(s);
     env->propSetFloat(props, "ExBlendMD", compat_ ? r.cmd : scaleSum(r.md, stats_.geom), PROPAPPENDMODE_REPLACE);
     env->propSetFloat(props, "ExBlendFD", compat_ ? r.cfd : scaleSum(r.fd, stats_.geom), PROPAPPENDMODE_REPLACE);
@@ -243,7 +244,7 @@ AVSValue __cdecl createExBlend(AVSValue args, void*, IScriptEnvironment* env) {
   const std::string logfile = args[16].AsString("");
   const std::string statsfile = args[1].AsString("");
 
-  if (opt.pal != 0 && opt.pal != 1) env->ThrowError("ExBlend: pal must be 0 (film) or 1 (PAL)");
+  if (opt.pal < -1 || opt.pal > 1) env->ThrowError("ExBlend: pal must be -1 (auto), 0 (film) or 1 (PAL)");
   if (opt.lockthresh < 0 || opt.lockthresh > 100) env->ThrowError("ExBlend: lockthresh must be 0.0 .. 100.0");
   if (opt.ithresh < 0 || opt.ithresh > 100) env->ThrowError("ExBlend: ithresh must be 0.0 .. 100.0");
   if (op.disp < DISP_BLENDED || op.disp > DISP_ADJACENT) env->ThrowError("ExBlend: disp must be 0 .. 4");
@@ -275,7 +276,7 @@ AVSValue __cdecl createExBlend(AVSValue args, void*, IScriptEnvironment* env) {
 
   Sequence seq;
   if (!buildSequence(stats, opt, seq, msg)) env->ThrowError("ExBlend: %s", msg.c_str());
-  if (!decfile.empty() && !writeDecimatedFile(decfile, seq, opt.pal, decclpix, msg))
+  if (!decfile.empty() && !writeDecimatedFile(decfile, seq, decclpix, msg))
     env->ThrowError("ExBlend: %s", msg.c_str());
   if (!logfile.empty() && !writeLogFile(logfile, seq, stats, opt, msg)) env->ThrowError("ExBlend: %s", msg.c_str());
   return new ExBlendFilter(child, hasD ? det : nullptr, std::move(seq), std::move(stats), op, opt.compat, show);

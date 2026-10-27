@@ -69,7 +69,7 @@ ExBlendScan(clip clip, string "statsfile", clip "dclip")
 |---|---|---|
 | `statsfile` | none | File for the scan measurements; read when it belongs to the clip, otherwise (re)written. |
 | `dclip` | none | Detection clip (same format, size, length and rate), e.g. denoised or vertically blurred. Detection always uses it; `compub` decides whether unblending does. |
-| `pal` | 0 | 0: film origin, cycle of 5 (3 good + 2 blends). 1: PAL origin, cycle of 6. |
+| `pal` | 0 | 0: film origin, cycle of 5 (3 good + 2 blends). 1: PAL origin, cycle of 6. -1: automatic, see below. |
 | `lockthresh` | 1.0 | 0.0–100.0. Locks onto the sequence in near-static scenes when the lock metric is at or below this value; 0 switches locking off. |
 | `ithresh` | 3.0 | 0.0–100.0. A detected pair whose merge delta is above this value is ignored (protects against wrong unblends at scene changes; raise it for poor clips with many ignored pairs). |
 | `fullscan` | 1 | 1: the detector evaluates every frame. 0: frames already decided by a neighbouring blend pair are skipped, as v1.04 did with `show=0`/`1`; gives slightly different decisions. |
@@ -86,8 +86,17 @@ ExBlendScan(clip clip, string "statsfile", clip "dclip")
 ### Frame properties
 
 `ExBlend` sets on every output frame: `ExBlendIndex` (0 none, 1/2 blend index, 3 hinted), `ExBlendFlags` (raw
-decision byte, as in v1.04 XBD files), `ExBlendSource` (input frame number), `ExBlendMD`, `ExBlendFD` (metrics of the
+decision byte, as in v1.04 XBD files), `ExBlendSource` (input frame number), `ExBlendPal` (0 film, 1 PAL; the variant used, also with `pal=-1`), `ExBlendMD`, `ExBlendFD` (metrics of the
 pair starting at that input frame). `Scan` sets `ExBlendMD`, `ExBlendFD`, `ExBlendLD`.
+
+### Automatic film/PAL choice
+
+With `pal=-1` the decision pass runs for both variants. For each, the share of cycles whose blend pair continues
+exactly one cycle later is measured. A variant is used when it reaches at least 0.5 and twice the value of the
+other; otherwise the clip counts as undecided and film is used. On real clips the right variant scores 0.5–0.98
+and the wrong one at most 0.2; clips without a clean blend pattern give 0.4 or less for both. The scores and the
+choice are the first line of the log file (`AUTO: film=… PAL=… -> …`) and, in VapourSynth, an information message.
+The choice holds for the whole clip; process clips that mix both in parts (`Trim`) with a fixed `pal` each.
 
 ### Checking a clip
 
@@ -121,7 +130,9 @@ One command per line, in ascending frame order; `#` starts a comment line.
     settings now; `fullscan=0` keeps the old variant.
   - Invalid combinations (`disp=2` with decimation, `disp=4` without) are errors instead of silently using `disp=1`.
 - `compat=1` brings back the first two behaviours for 8-bit comparisons with the original.
-- Removed: mode 0 and `pal=-1` (auto PAL), the text overlay (`show` 2–5; use the frame properties, e.g.
+- Changed: `pal=-1` decides once for the whole clip after the scan instead of switching while frames are delivered
+  (v1.04 mode 0 only); it works with decimation and does not depend on the frame order.
+- Removed: mode 0 (free running), the text overlay (`show` 2–5; use the frame properties, e.g.
   `text.FrameProps`), `ver`, `revip`, log levels (`lv`, `dv`, `debug`, DebugView), YUY2.
 - New: 9–16 bit (thresholds keep their 8-bit units), Gray, all chroma subsamplings, VapourSynth, frame properties,
   `#` comments in override files.

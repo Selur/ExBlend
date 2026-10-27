@@ -73,8 +73,12 @@ bool saveStats(const std::string& path, const Stats& s, std::string& err);
 // Returns false with err empty when the file does not exist.
 bool loadStats(const std::string& path, Stats& s, std::string& err);
 
+// Automatic film/PAL choice: a variant wins with at least this share of continued cycles and this lead over the other.
+constexpr double kAutoMinScore = 0.5;
+constexpr double kAutoMinLead = 2.0;
+
 struct Options {
-  int pal = 0;              // 0 film (cycle 5), 1 PAL (cycle 6)
+  int pal = 0;              // 0 film (cycle 5), 1 PAL (cycle 6), -1 automatic
   double lockthresh = 1.0;  // 0 switches locking off
   double ithresh = 3.0;
   bool fullscan = true;     // evaluate every frame (v1.04 mode 1 with show >= 2)
@@ -85,6 +89,8 @@ struct Options {
 // Result of the sequential decision pass.
 struct Sequence {
   int frames = 0;
+  int pal = 0;                      // variant used, also when Options::pal is -1
+  double score[2] = {0, 0};         // automatic choice: share of continued cycles for film and PAL
   int hints = kFilmHints;
   int cycle = 5;
   std::vector<uint8_t> fdat;        // decision byte per input frame
@@ -98,7 +104,7 @@ struct Sequence {
 bool buildSequence(const Stats& stats, const Options& opt, Sequence& seq, std::string& err);
 
 // ClipClop command file of the recovered frames in the decimated clip (v1.04 format).
-bool writeDecimatedFile(const std::string& path, const Sequence& seq, int pal, int clipIndex, std::string& err);
+bool writeDecimatedFile(const std::string& path, const Sequence& seq, int clipIndex, std::string& err);
 
 bool writeLogFile(const std::string& path, const Sequence& seq, const Stats& stats, const Options& opt, std::string& err);
 

@@ -105,6 +105,7 @@ class Decider {
 
   bool run(std::string& err) {
     seq_.frames = n_;
+    seq_.pal = opt_.pal == 1 ? 1 : 0;
     seq_.hints = opt_.pal == 1 ? kPalHints : kFilmHints;
     seq_.cycle = seq_.hints + 2;
     fdat().assign(static_cast<size_t>(n_), FDAT_INIT);
@@ -542,13 +543,43 @@ bool loadStats(const std::string& path, Stats& s, std::string& err) {
   return ok;
 }
 
-bool buildSequence(const Stats& stats, const Options& opt, Sequence& seq, std::string& err) {
-  seq = Sequence();
-  Decider d(stats, opt, seq);
-  return d.run(err);
+namespace {
+
+// Share of cycles whose blend pair continues one cycle later.
+double continuedCycles(const Sequence& s) {
+  int c = 0;
+  for (int n = s.cycle; n < s.frames; ++n)
+    if (isIX1(s.fdat[static_cast<size_t>(n)]) && isIX1(s.fdat[static_cast<size_t>(n - s.cycle)])) ++c;
+  return static_cast<double>(c) * s.cycle / s.frames;
 }
 
-bool writeDecimatedFile(const std::string& path, const Sequence& seq, int pal, int clipIndex, std::string& err) {
+}  // namespace
+
+bool buildSequence(const Stats& stats, const Options& opt, Sequence& seq, std::string& err) {
+  if (opt.pal != -1) {
+    seq = Sequence();
+    Decider d(stats, opt, seq);
+    return d.run(err);
+  }
+  Sequence v[2];
+  for (int pal = 0; pal < 2; ++pal) {
+    Options o = opt;
+    o.pal = pal;
+    Decider d(stats, o, v[pal]);
+    if (!d.run(err)) return false;
+  }
+  const double s0 = continuedCycles(v[0]), s1 = continuedCycles(v[1]);
+  const bool pal = s1 >= kAutoMinScore && s1 >= kAutoMinLead * s0;
+  const bool film = s0 >= kAutoMinScore && s0 >= kAutoMinLead * s1;
+  seq = std::move(v[pal ? 1 : 0]);
+  seq.score[0] = s0;
+  seq.score[1] = s1;
+  seq.log.insert(seq.log.begin(), format("AUTO: film=%.3f PAL=%.3f -> %s", s0, s1,
+                                         pal ? "PAL" : (film ? "film" : "film (undecided)")));
+  return true;
+}
+
+bool writeDecimatedFile(const std::string& path, const Sequence& seq, int clipIndex, std::string& err) {
   FILE* fp = std::fopen(path.c_str(), "wt");
   if (!fp) {
     err = "cannot write " + path;
@@ -556,7 +587,7 @@ bool writeDecimatedFile(const std::string& path, const Sequence& seq, int pal, i
   }
   const int N = seq.frames, cycle = seq.cycle;
   const int lo = static_cast<int>(seq.decimatedToSource.size());
-  std::fprintf(fp, "#\n# PAL=%d, Cycle = %d.\n", pal, cycle);
+  std::fprintf(fp, "#\n# PAL=%d, Cycle = %d.\n", seq.pal, cycle);
   std::fprintf(fp, "# Inframes=%d, OutFrames = %d.\n#\n", N, lo);
   if (clipIndex == 1) {
     std::fprintf(fp, "# ClipClop() Command file for Exblend mode 2 Decimated output.\n");
@@ -590,8 +621,9 @@ bool writeLogFile(const std::string& path, const Sequence& seq, const Stats& sta
     err = "cannot write " + path;
     return false;
   }
-  std::fprintf(fp, "# ExBlend log: frames=%d pal=%d lockthresh=%.4f ithresh=%.4f fullscan=%d compat=%d\n", seq.frames,
-               opt.pal, opt.lockthresh, opt.ithresh, opt.fullscan ? 1 : 0, opt.compat ? 1 : 0);
+  std::fprintf(fp, "# ExBlend log: frames=%d pal=%d%s lockthresh=%.4f ithresh=%.4f fullscan=%d compat=%d\n", seq.frames,
+               seq.pal, opt.pal == -1 ? " (auto)" : "", opt.lockthresh, opt.ithresh, opt.fullscan ? 1 : 0,
+               opt.compat ? 1 : 0);
   for (const std::string& l : seq.log) std::fprintf(fp, "%s\n", l.c_str());
   const int maxPairs = seq.frames / (seq.hints + kBlendCount);
   if (seq.blendPairs) {

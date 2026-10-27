@@ -51,7 +51,7 @@ def main():
         core.std.LoadPlugin(os.path.join(os.path.dirname(vs.__file__), "plugins2", "libbestsource.dll"))
     src = core.bs.VideoSource(a.clip)
     d = core.bs.VideoSource(a.dclip) if a.dclip else None
-    cases = [{}, {"decimate": 0}, {"compat": 1}, {"compat": 1, "decimate": 0}, {"pal": 1}, {"fullscan": 0},
+    cases = [{}, {"decimate": 0}, {"compat": 1}, {"compat": 1, "decimate": 0}, {"pal": 1}, {"pal": -1}, {"fullscan": 0},
              {"disp": 3, "decompix": 2}, {"decimate": 0, "disp": 2}, {"show": 1}]
     if d is not None:
         cases += [{"dclip": True, "compub": c} for c in (0, 1, 2)]
