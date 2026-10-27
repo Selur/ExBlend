@@ -86,7 +86,8 @@ ExBlendScan(clip clip, string "statsfile", clip "dclip")
 ### Frame properties
 
 `ExBlend` sets on every output frame: `ExBlendIndex` (0 none, 1/2 blend index, 3 hinted), `ExBlendFlags` (raw
-decision byte, as in v1.04 XBD files), `ExBlendSource` (input frame number), `ExBlendPal` (0 film, 1 PAL; the variant used, also with `pal=-1`), `ExBlendMD`, `ExBlendFD` (metrics of the
+decision byte, as in v1.04 XBD files), `ExBlendSource` (input frame number), `ExBlendPal` (0 film, 1 PAL; the variant used, also with `pal=-1`), `ExBlendScore` (share of cycles whose blend
+pair continues one cycle later, for the variant used; below 0.5 the clip shows no clear pattern), `ExBlendMD`, `ExBlendFD` (metrics of the
 pair starting at that input frame). `Scan` sets `ExBlendMD`, `ExBlendFD`, `ExBlendLD`.
 
 ### Automatic film/PAL choice
@@ -97,6 +98,10 @@ other; otherwise the clip counts as undecided and film is used. On real clips th
 and the wrong one at most 0.2; clips without a clean blend pattern give 0.4 or less for both. The scores and the
 choice are the first line of the log file (`AUTO: film=… PAL=… -> …`) and, in VapourSynth, an information message.
 The choice holds for the whole clip; process clips that mix both in parts (`Trim`) with a fixed `pal` each.
+
+A clip without a clear pattern (undecided with `pal=-1`, or a score below 0.5 with a fixed `pal`) gets a warning in
+the log file and, in VapourSynth, a warning message. ExBlend still unblends and decimates such a clip, which damages
+material that has no blend pattern (e.g. clean 25p becomes 20 fps).
 
 ### Checking a clip
 

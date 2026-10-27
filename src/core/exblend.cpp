@@ -23,13 +23,14 @@ constexpr int kBad = 235 * 2;
 constexpr int kMin = 16 * 2 - kGap;
 constexpr int kMax = 235 * 2 + kGap;
 
-template <typename P>
+// Compat: also the v1.04 float sums (only 8 bit, where compat is allowed).
+template <typename P, bool Compat>
 void computePairT(const PlaneRef f[4], const Geometry& g, PairRecord& out) {
   const int s = g.bits - 8;
   const int cmin = kClampMin << s, cmax = kClampMax << s;
   const int lim = kLim << s, bad = kBad << s, ymin = kMin << s, ymax = kMax << s;
   uint64_t smd = 0, sfd = 0, sld = 0;
-  // v1.04 accumulates every pixel into a float; kept for compat mode.
+  // v1.04 accumulates every pixel into a float, in this order.
   float wmd = 0.0f, wfd = 0.0f, wld = 0.0f;
   for (int y = 0; y < g.height - 1; y += 2) {
     const P* ra[4];
@@ -54,14 +55,20 @@ void computePairT(const PlaneRef f[4], const Geometry& g, PairRecord& out) {
       smd += static_cast<uint64_t>(md);
       sfd += static_cast<uint64_t>(fd);
       sld += static_cast<uint64_t>(ld);
-      wmd += md;
-      wfd += fd;
-      wld += ld;
+      if constexpr (Compat) {
+        wmd += md;
+        wfd += fd;
+        wld += ld;
+      }
     }
   }
   out.md = smd;
   out.fd = sfd;
   out.ld = sld;
+  if constexpr (!Compat) {
+    out.cmd = out.cfd = out.cld = 0.0f;
+    return;
+  }
   wmd *= 0.5f;
   wfd *= 0.5f;
   wld *= 0.5f;
@@ -502,9 +509,9 @@ void renderT(const FramePlan& plan, const PlaneRef src[4], uint8_t* dst, ptrdiff
 
 void computePair(const PlaneRef frames[4], const Geometry& g, PairRecord& out) {
   if (g.bits == 8)
-    computePairT<uint8_t>(frames, g, out);
+    computePairT<uint8_t, true>(frames, g, out);
   else
-    computePairT<uint16_t>(frames, g, out);
+    computePairT<uint16_t, false>(frames, g, out);
 }
 
 double scaleSum(uint64_t sum, const Geometry& g) {
@@ -606,7 +613,13 @@ bool buildSequence(const Stats& stats, const Options& opt, Sequence& seq, std::s
   if (opt.pal != -1) {
     seq = Sequence();
     Decider d(stats, opt, seq);
-    return d.run(err);
+    if (!d.run(err)) return false;
+    seq.score[seq.pal] = continuedCycles(seq);
+    if (seq.score[seq.pal] < kAutoMinScore)
+      seq.warning = format("no clear %s blend pattern (continued cycles %.3f, expected at least %.2f)",
+                           seq.pal ? "PAL" : "film", seq.score[seq.pal], kAutoMinScore);
+    if (!seq.warning.empty()) seq.log.insert(seq.log.begin(), "WARNING: " + seq.warning);
+    return true;
   }
   Sequence v[2];
   for (int pal = 0; pal < 2; ++pal) {
@@ -623,6 +636,10 @@ bool buildSequence(const Stats& stats, const Options& opt, Sequence& seq, std::s
   seq.score[1] = s1;
   seq.log.insert(seq.log.begin(), format("AUTO: film=%.3f PAL=%.3f -> %s", s0, s1,
                                          pal ? "PAL" : (film ? "film" : "film (undecided)")));
+  if (!pal && !film) {
+    seq.warning = format("neither film nor PAL blend pattern (continued cycles film %.3f, PAL %.3f)", s0, s1);
+    seq.log.insert(seq.log.begin() + 1, "WARNING: " + seq.warning);
+  }
   return true;
 }
 

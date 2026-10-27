@@ -11,7 +11,7 @@ VapourSynth API 4 (`exblend.ExBlend`, `exblend.Scan`). 8..16 bit integer planar 
   - `computePair()`: detector sums of one frame pair (p, p+1) with neighbours p-1, p+2. The v1.04 7-frame window of
     `Findblend()` is exactly the pairs n-2..n+1, so every frame needs one pair record (`Stats::pair(p)`, p = -2..N).
     Each record holds exact 64-bit sums and the v1.04 float sums (`cmd`/`cfd`/`cld`, per-pixel float accumulation in
-    the original order) so `compat` needs no rescan. Strict single precision matters (`/fp:precise`,
+    the original order, 8 bit only since `compat` needs 8 bit) so `compat` needs no rescan. Strict single precision matters (`/fp:precise`,
     `-ffp-contract=off`).
   - `buildSequence()`: override parser, the decision pass of v1.04 `GetFrame()` mode 1 run forward over all frames
     (`Decider::decide<T>`, `float` for compat, `double` otherwise), decimation choice of the v1.04 destructor.

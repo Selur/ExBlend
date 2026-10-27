@@ -179,6 +179,18 @@ def main():
     with open(autolog) as f:
         text = f.read()
     check(a.get_frame(10).props["ExBlendPal"] == 0 and "undecided" in text, "pal=-1 without blends stays film")
+    check("WARNING: neither film nor PAL" in text, "pal=-1 without blends warns")
+
+    # Pattern score and warning with a fixed pal: clean pattern scores high, a clip without blends warns.
+    check(dec.get_frame(10).props["ExBlendScore"] > 0.9, "film pattern score %.3f" % dec.get_frame(10).props["ExBlendScore"])
+    nolog = os.path.join(tmp, "noblend.log")
+    n = core.exblend.ExBlend(src, pal=0, logfile=nolog)
+    with open(nolog) as f:
+        text = f.read()
+    check(n.get_frame(10).props["ExBlendScore"] < 0.5 and "WARNING: no clear film blend pattern" in text,
+          "pal=0 without blends warns (score %.3f)" % n.get_frame(10).props["ExBlendScore"])
+    with open(log) as f:
+        check("WARNING" not in f.read(), "no warning on the film pattern")
 
     # High bit depth: same decisions for the same picture content; output close to the film.
     base_flags = props(out, "ExBlendFlags", range(clip.num_frames))

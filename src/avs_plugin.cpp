@@ -141,6 +141,7 @@ class ExBlendFilter : public GenericVideoFilter {
     env->propSetInt(props, "ExBlendFlags", flags, PROPAPPENDMODE_REPLACE);
     env->propSetInt(props, "ExBlendSource", s, PROPAPPENDMODE_REPLACE);
     env->propSetInt(props, "ExBlendPal", seq_.pal, PROPAPPENDMODE_REPLACE);
+    env->propSetFloat(props, "ExBlendScore", seq_.score[seq_.pal], PROPAPPENDMODE_REPLACE);
     const PairRecord& r = stats_.pair(s);
     env->propSetFloat(props, "ExBlendMD", compat_ ? r.cmd : scaleSum(r.md, stats_.geom), PROPAPPENDMODE_REPLACE);
     env->propSetFloat(props, "ExBlendFD", compat_ ? r.cfd : scaleSum(r.fd, stats_.geom), PROPAPPENDMODE_REPLACE);

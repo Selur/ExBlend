@@ -95,7 +95,8 @@ struct Options {
 struct Sequence {
   int frames = 0;
   int pal = 0;                      // variant used, also when Options::pal is -1
-  double score[2] = {0, 0};         // automatic choice: share of continued cycles for film and PAL
+  double score[2] = {0, 0};         // share of continued cycles for film and PAL (the variant used, both with pal=-1)
+  std::string warning;              // set when the clip shows no clear blend pattern
   int hints = kFilmHints;
   int cycle = 5;
   std::vector<uint8_t> fdat;        // decision byte per input frame

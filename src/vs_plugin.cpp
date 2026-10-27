@@ -156,6 +156,7 @@ const VSFrame* VS_CC exblendGetFrame(int n, int reason, void* instance, void**, 
   vsapi->mapSetInt(props, "ExBlendFlags", flags, maReplace);
   vsapi->mapSetInt(props, "ExBlendSource", s, maReplace);
   vsapi->mapSetInt(props, "ExBlendPal", d->seq.pal, maReplace);
+  vsapi->mapSetFloat(props, "ExBlendScore", d->seq.score[d->seq.pal], maReplace);
   const PairRecord& r = d->stats.pair(s);
   vsapi->mapSetFloat(props, "ExBlendMD", d->compat ? r.cmd : scaleSum(r.md, d->stats.geom), maReplace);
   vsapi->mapSetFloat(props, "ExBlendFD", d->compat ? r.cfd : scaleSum(r.fd, d->stats.geom), maReplace);
@@ -389,6 +390,7 @@ void VS_CC exblendCreate(const VSMap* in, VSMap* out, void*, VSCore* core, const
 
   if (!buildSequence(d->stats, opt, d->seq, msg)) return fail(msg);
   if (opt.pal == -1) vsapi->logMessage(mtInformation, ("ExBlend: " + d->seq.log.front()).c_str(), core);
+  if (!d->seq.warning.empty()) vsapi->logMessage(mtWarning, ("ExBlend: " + d->seq.warning).c_str(), core);
   const std::string decfile = mapString(in, "decfile", vsapi);
   if (!decfile.empty() && !writeDecimatedFile(decfile, d->seq, decclpix, msg)) return fail(msg);
   const std::string logfile = mapString(in, "logfile", vsapi);
