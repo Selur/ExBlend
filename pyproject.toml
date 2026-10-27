@@ -1,0 +1,18 @@
+[build-system]
+build-backend = 'mesonpy'
+requires = ['meson-python>=0.15']
+
+[project]
+name = 'vapoursynth-exblend'
+dynamic = ['version']
+description = 'ExBlend: repairs blend-deinterlaced telecined video, for VapourSynth and AviSynth+'
+readme = 'README.md'
+license = {text = 'GPL-2.0-or-later'}
+requires-python = '>=3.8'
+dependencies = ['VapourSynth']
+
+[tool.meson-python.args]
+setup = ['-Dpython_package=true']
+
+[tool.meson-python.wheel]
+exclude = ['*/*.dll.a', '*/*.lib', '*/*.a']

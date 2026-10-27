@@ -1,0 +1,14 @@
+# Original binaries, build output and test data stay out of the repository
+*.dll
+*.exe
+*.pdb
+*.lib
+*.obj
+*.exp
+build*/
+.vs/
+__pycache__/
+dist/
+wheelhouse/
+*.whl
+*.stats
