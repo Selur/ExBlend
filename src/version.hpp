@@ -2,5 +2,5 @@
 #pragma once
 
 #define EXBLEND_VERSION_MAJOR 2
-#define EXBLEND_VERSION_MINOR 0
-#define EXBLEND_VERSION "2.0.0"
+#define EXBLEND_VERSION_MINOR 1
+#define EXBLEND_VERSION "2.1.0"

@@ -5,6 +5,6 @@ call "C:\Program Files\Microsoft Visual Studio\18\Community\VC\Auxiliary\Build\v
 cd /d "%~dp0"
 if not exist build mkdir build
 set FLAGS=/nologo /O2 /EHsc /std:c++17 /fp:precise /W4 /MT /DNDEBUG /D_CRT_SECURE_NO_WARNINGS /Iinclude\avisynth /Iinclude\vapoursynth /Isrc
-cl %FLAGS% /LD src\core\exblend.cpp src\avs_plugin.cpp src\vs_plugin.cpp ^
+cl %FLAGS% /LD src\core\exblend.cpp src\core\anim_deblend.cpp src\avs_plugin.cpp src\vs_plugin.cpp src\vs_anim_deblend.cpp ^
   /Fobuild\ /Fdbuild\ /Febuild\ExBlend.dll /link /NOLOGO || exit /b 1
-cl %FLAGS% test\core_test.cpp src\core\exblend.cpp /Fobuild\ /Fdbuild\ /Febuild\core_test.exe /link /NOLOGO || exit /b 1
+cl %FLAGS% test\core_test.cpp src\core\exblend.cpp src\core\anim_deblend.cpp /Fobuild\ /Fdbuild\ /Febuild\core_test.exe /link /NOLOGO || exit /b 1

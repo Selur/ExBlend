@@ -9,6 +9,8 @@ This is a port of StainlessS' AviSynth plugin ExBlend v1.04 (2018,
 [doom9 thread](https://forum.doom9.org/showthread.php?t=175948)). One file serves both hosts: 64-bit AviSynth+ 3.7.5
 or newer and VapourSynth R55 or newer (API 4). 8–16 bit integer planar YUV and Gray.
 
+The VapourSynth side also has `AnimDeblend` for animation blended without a fixed pattern (see below).
+
 ## How it works
 
 For every pair of neighbouring frames *(n, n+1)* ExBlend tries to unblend the middle film frame twice
@@ -121,6 +123,45 @@ One command per line, in ascending frame order; `#` starts a comment line.
 
 `2=*1000000` forces a clip that is known to stay in sequence, with its first pair at frame 2.
 
+## AnimDeblend (VapourSynth)
+
+For **animation** (cartoons, anime) blended without a fixed telecine pattern: drawings with irregular timing blended
+into their neighbours, recurring blends of any period from 2 to 8 frames (with phase changes anywhere), single blends,
+and fast pans in which every frame carries a faint copy of the previous one. No frame rate is needed and the frame
+count stays the same: a blend frame is replaced by the drawing it mostly shows, a faint copy is subtracted.
+
+```python
+clip = core.exblend.AnimDeblend(clip, mode="both", unghost=1)
+```
+
+```
+exblend.AnimDeblend(vnode clip[, float strength=1.0, data mode="anchor", int unghost=0, int fill=1, float rho=0.1,
+                    float minweight=0.1, float switch=1.5, int maxgap=4, float kappa=3.0, int width=160,
+                    int block=512, int overlap=128])
+```
+
+| Parameter | Default | Meaning |
+|---|---|---|
+| `strength` | 1.0 | 0.0–1.0. 1 replaces a blend by its dominant drawing; smaller values mix towards it. With `unghost` it scales how much of the faint copy is removed. |
+| `mode` | `"anchor"` | `"anchor"`: every frame is a drawing or a blend of the drawings around it (up to `maxgap`-1 blends in a row, irregular timing). `"cadence"`: blends that recur with a period of 2–8 frames (one or two per period), plus single clear blends. `"both"`: both. |
+| `unghost` | 0 | 1: a frame that shows a new drawing plus a faint copy of a neighbour at the neighbour's own position (fast pans, every frame blended) gets the copy subtracted. Frames the blend modes treat are replaced instead. |
+| `fill` | 1 | Fills gaps (up to 3 frames) in a regular run of blends and extends a run by one frame, when the frame is a mix of its neighbours. |
+| `rho` | 0.1 | `anchor`: how much better the blend explanation must be than copying a drawing; larger finds more (VHS sources: 0.2). |
+| `minweight` | 0.1 | 0.01–0.49. Smallest share of the weaker drawing that counts as a blend. |
+| `switch` | 1.5 | `cadence`: cost of starting, ending or changing a cadence; smaller accepts shorter stretches. |
+| `maxgap`, `kappa` | 4, 3.0 | `anchor`: longest distance between two drawings; cost of a drawing in noise units. |
+| `width` | 160 | Width of the blend analysis (luma, resized). The ghost analysis runs at 720. |
+| `block`, `overlap` | 512, 128 | The analysis runs per block of frames (with `overlap` frames of context on each side) when a frame of the block is first requested; 0 analyses the whole clip at once. |
+
+Frame properties: `AnimBlend` (0/1), `AnimBlendFrom`, `AnimBlendTo` (the two drawings), `AnimBlendWeight` (share of
+`AnimBlendTo`), `AnimGhost` (0/1), `AnimGhostFrom`, `AnimGhostWeight`. Show them with `text.FrameProps`.
+
+Limits: meant for animation only; flowing live-action motion lies between its neighbours and is easily taken for a
+blend, and there is no automatic switch-off. The noise level is estimated from the quietest frame differences of the
+clip, so a clip without held frames (or a short excerpt of one) detects too much. Blends of a part of the frame only
+are not found. 8–16 bit integer and 32 bit float YUV and Gray. `prototype/anim_deblend.py` is the Python reference
+the plugin was ported from (same decisions).
+
 ## Differences from ExBlend v1.04
 
 - No modes. The scan replaces mode 1, the output replaces mode 2; the stats file replaces the XBD file and stores
@@ -152,6 +193,7 @@ One command per line, in ascending frame order; `#` starts a comment line.
 for a local MSVC build. Wheel: `pip install .`.
 
 Tests: `test/test_exblend.py` (VapourSynth, synthetic clips with known film frames; runs in CI),
+`test/test_animdeblend.py` (AnimDeblend on synthetic cartoon-like drawings with known blends and ghosts; runs in CI),
 `test/core_test.cpp` (pair metrics against the v1.04 detector code), and on Windows `test/compare_original.py`
 (AviSynth+, port with `compat=true` against the original DLL: decisions, decimated frames file and every output frame)
 and `test/compare_hosts.py` (VapourSynth against AviSynth+ output of the same build).

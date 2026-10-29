@@ -25,6 +25,14 @@ VapourSynth API 4 (`exblend.ExBlend`, `exblend.Scan`). 8..16 bit integer planar 
 - Defects of v1.04 fixed by default and restored by `compat=1`: float sums, frame 0 weight 0 in decimation, phase
   lock after a static stretch (`canRephase()`/`rephase()`, thresholds `kRephaseMinFD`, `kRephaseRatio`, rhythm rule).
   `fullscan=0` restores the decisions of v1.04 with `show` <= 1. Keep every other behaviour identical to v1.04.
+- `exblend.AnimDeblend` (VapourSynth only): port of `prototype/anim_deblend.py`, which stays the reference for
+  experiments. `src/core/anim_deblend.*` mirrors the prototype function by function (same tie-breaking, numpy
+  conventions for percentile and histogram); `src/vs_anim_deblend.cpp` analyses per block on first request
+  (`ensurePart`, block mutex). The analysing thread must be a VapourSynth worker: its synchronous `getFrame` gets a
+  reserved thread; an own thread analysing ahead (or a request to the filter's own node) deadlocked when all worker
+  threads waited on the block. Per-frame ghost work runs on `parallelFor`; the 3x3 box blur is computed in C++
+  (a `std.BoxBlur` node in the read path cost more than the whole ghost analysis). Rule changes go into the prototype
+  first, then here; keep both deciding alike (`test/compare_prototype.py`).
 
 ## Tests
 
@@ -38,6 +46,10 @@ VapourSynth API 4 (`exblend.ExBlend`, `exblend.Scan`). 8..16 bit integer planar 
   `G:\clips\blends`, decoded once to y4m with ffmpeg, read with BestSource in both hosts.
 - `test/compare_hosts.py` (Hybrid's VapourSynth Python): VapourSynth against AviSynth+ output of the same build,
   stats files byte-identical.
+- `test/test_animdeblend.py`: AnimDeblend on synthetic blocky drawings (known mixes and ghosts); runs in CI. The clips
+  start with held frames: without holds the noise estimate measures motion and every frame looks like a blend.
+- `test/compare_prototype.py` (Hybrid's VapourSynth Python): AnimDeblend decisions against the prototype on real clips;
+  identical apart from rare borderline frames.
 - Work files go to `J:\tmp\claude\exblend\`.
 
 ## Build

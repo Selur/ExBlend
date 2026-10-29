@@ -39,7 +39,7 @@ jobs:
           CIBW_CONFIG_SETTINGS_WINDOWS: setup-args=--vsenv setup-args=-Db_vscrt=mt
           # The test installs the wheel together with the VapourSynth PyPI package
           # (binary wheels for all three platforms) and runs the functional tests.
-          CIBW_TEST_COMMAND: python {project}/test/test_exblend.py
+          CIBW_TEST_COMMAND: python {project}/test/test_exblend.py && python {project}/test/test_animdeblend.py
 
       - name: Re-tag wheel as Python-independent
         shell: bash

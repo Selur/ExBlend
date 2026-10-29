@@ -1,11 +1,11 @@
 project('ExBlend', 'cpp',
   default_options : ['buildtype=release', 'b_ndebug=if-release', 'cpp_std=c++17'],
   meson_version : '>=0.64.0',
-  version : '2.0.0'
+  version : '2.1.0'
 )
 
-core_sources = ['src/core/exblend.cpp']
-sources = core_sources + ['src/avs_plugin.cpp', 'src/vs_plugin.cpp']
+core_sources = ['src/core/exblend.cpp', 'src/core/anim_deblend.cpp']
+sources = core_sources + ['src/avs_plugin.cpp', 'src/vs_plugin.cpp', 'src/vs_anim_deblend.cpp']
 
 # Vendored AviSynth+ (3.7.5) and VapourSynth (API 4) headers.
 incs = include_directories('include/avisynth', 'include/vapoursynth', 'src')

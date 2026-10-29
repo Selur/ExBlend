@@ -409,6 +409,8 @@ void VS_CC exblendCreate(const VSMap* in, VSMap* out, void*, VSCore* core, const
 
 }  // namespace
 
+void registerAnimDeblend(VSPlugin* plugin, const VSPLUGINAPI* vspapi);  // vs_anim_deblend.cpp
+
 VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin* plugin, const VSPLUGINAPI* vspapi) {
   vspapi->configPlugin("io.github.selur.exblend", "exblend", "ExBlend " EXBLEND_VERSION,
                        VS_MAKE_VERSION(EXBLEND_VERSION_MAJOR, EXBLEND_VERSION_MINOR), VAPOURSYNTH_API_VERSION, 0,
@@ -421,4 +423,5 @@ VS_EXTERNAL_API(void) VapourSynthPluginInit2(VSPlugin* plugin, const VSPLUGINAPI
                            "compub:int:opt;decimate:int:opt;decompix:int:opt;show:int:opt;decfile:data:opt;"
                            "decclpix:int:opt;logfile:data:opt;",
                            "clip:vnode;", exblendCreate, nullptr, plugin);
+  registerAnimDeblend(plugin, vspapi);
 }
