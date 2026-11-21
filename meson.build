@@ -1,7 +1,7 @@
 project('ExBlend', 'cpp',
   default_options : ['buildtype=release', 'b_ndebug=if-release', 'cpp_std=c++17'],
   meson_version : '>=0.64.0',
-  version : '2.1.0'
+  version : '2.1.1'
 )
 
 core_sources = ['src/core/exblend.cpp', 'src/core/anim_deblend.cpp']
